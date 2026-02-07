@@ -1,6 +1,6 @@
 # Row Reduction Algorithm
 
-A Python implementation of the **Row Reduction Algorithm** as taught in introductory Linear Algebra courses. The program performs row reduction step-by-step, showing every row operation, and produces the **reduced echelon form (RREF)** of any matrix.
+A step-by-step implementation of the **Row Reduction Algorithm** as taught in introductory Linear Algebra courses. Includes both a Python command-line tool and an interactive web UI themed in Sacramento State colors.
 
 ## Algorithm
 
@@ -18,14 +18,38 @@ Beginning with the rightmost pivot position, working upward and to the left:
 - (5-1) If the number inside the pivot position is not 1, make it 1 by scaling the corresponding row.
 - (5-2) Use row replacement operations to create zeros above the pivot position.
 
+## Project Structure
+
+```
+RREF_solver/
+├── row_reduction.py          # Python CLI tool
+├── test_row_reduction.py     # Test suite (14 edge cases)
+├── rref-ui/                  # React web UI
+│   ├── src/
+│   │   ├── App.jsx           # Main UI component
+│   │   └── main.jsx          # Entry point
+│   ├── package.json
+│   └── ...
+├── README.md
+├── LICENSE
+└── .gitignore
+```
+
 ## Requirements
 
+**Python CLI:**
 - Python 3.6+
 - No external dependencies (uses only the standard library `fractions` module)
 
+**Web UI:**
+- Node.js 18+
+- npm
+
 ## Usage
 
-Run interactively:
+### Python CLI
+
+Run interactively from the project root:
 
 ```
 python row_reduction.py
@@ -47,7 +71,7 @@ Enter each row as 4 space-separated numbers (fractions like 3/4 are OK):
 
 The program prints every row operation performed during both phases, then displays the final RREF.
 
-### Use as a module
+You can also import it as a module:
 
 ```python
 from row_reduction import row_reduce
@@ -60,10 +84,22 @@ matrix = [
 result = row_reduce(matrix)
 ```
 
-### Fraction support
+### Web UI
 
-All arithmetic is done with Python's `fractions.Fraction` class, so results are always exact — no floating-point rounding. You can also enter fractions as input:
+From the project root:
 
 ```
-  Row 1: 1/3 2/7 5
+cd rref-ui
+npm install
+npm run dev
 ```
+
+Then open [http://localhost:5173](http://localhost:5173) in your browser.
+
+The UI features:
+- Adjustable matrix size (up to 8×8)
+- Preset example matrices
+- Fraction input support (e.g. `3/4`)
+- Color-coded forward and backward phases
+- Highlighted pivot positions
+- Step-by-step operation labels
