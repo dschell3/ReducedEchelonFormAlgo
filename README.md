@@ -67,15 +67,3 @@ All arithmetic is done with Python's `fractions.Fraction` class, so results are 
 ```
   Row 1: 1/3 2/7 5
 ```
-
-## Tests
-
-```
-python test_row_reduction.py
-```
-
-Covers 14 edge cases: identity matrices, zero matrices, single row/column, row swaps, inconsistent systems, tall/wide matrices, large values, and complex fractional results.
-
-## License
-
-MIT
