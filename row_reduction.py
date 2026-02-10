@@ -9,12 +9,27 @@ Implements the exact algorithm as described:
 from fractions import Fraction
 
 
-def print_matrix(matrix, label=""):
-    """Pretty-print the matrix using fractions for exact arithmetic."""
+def print_matrix(matrix, label="", pivots=None):
+    """Pretty-print the matrix using fractions for exact arithmetic.
+    
+    If pivots is provided (list of (row, col) tuples), those entries
+    are displayed circled, e.g. (3) instead of  3.
+    """
+    pivot_set = set(pivots) if pivots else set()
     if label:
         print(f"\n{label}")
-    for row in matrix:
-        print("  [", "  ".join(f"{str(val):>8}" for val in row), "]")
+    for r, row in enumerate(matrix):
+        formatted = []
+        for c, val in enumerate(row):
+            s = str(val)
+            if (r, c) in pivot_set:
+                # Circle the leading entry: pad so the parenthesised
+                # value occupies the same 8-char field width
+                circled = f"({s})"
+                formatted.append(f"{circled:>8}")
+            else:
+                formatted.append(f"{s:>8}")
+        print("  [", "  ".join(formatted), "]")
     print()
 
 
@@ -122,7 +137,8 @@ def row_reduce(matrix):
     print("FORWARD PHASE (Steps 1-4): Echelon Form")
     print("=" * 50)
     matrix = forward_phase(matrix)
-    print_matrix(matrix, "Echelon form:")
+    pivots = find_pivots(matrix)
+    print_matrix(matrix, "Echelon form:", pivots=pivots)
 
     print("=" * 50)
     print("BACKWARD PHASE (Step 5): Reduced Echelon Form")
