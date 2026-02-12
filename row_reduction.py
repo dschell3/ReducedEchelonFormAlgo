@@ -73,7 +73,7 @@ def forward_phase(matrix):
                 factor = matrix[r][col] / matrix[pivot_row][col]
                 for c in range(cols):
                     matrix[r][c] -= factor * matrix[pivot_row][c]
-                print(f"  Step 3: R{r + 1} = R{r + 1} - ({factor}) * R{pivot_row + 1}")
+                print(f"  Step 3: R{r + 1} = R{r + 1} + ({-factor}) * R{pivot_row + 1}")
                 print_matrix(matrix)
 
         # Step 4: Move to the next row (cover the top row of submatrix)
@@ -111,7 +111,7 @@ def backward_phase(matrix):
             scale = pivot_val
             for c in range(cols):
                 matrix[pivot_row][c] /= scale
-            print(f"  Step 5-1: R{pivot_row + 1} = R{pivot_row + 1} / ({scale})")
+            print(f"  Step 5-1: R{pivot_row + 1} = ({Fraction(1, 1) / scale}) * R{pivot_row + 1}")
             print_matrix(matrix)
 
         # Step 5-2: Eliminate all entries above the pivot
@@ -120,13 +120,180 @@ def backward_phase(matrix):
                 factor = matrix[r][pivot_col]
                 for c in range(cols):
                     matrix[r][c] -= factor * matrix[pivot_row][c]
-                print(f"  Step 5-2: R{r + 1} = R{r + 1} - ({factor}) * R{pivot_row + 1}")
+                print(f"  Step 5-2: R{r + 1} = R{r + 1} + ({-factor}) * R{pivot_row + 1}")
                 print_matrix(matrix)
 
     return matrix
 
 
-def row_reduce(matrix):
+def solve_system(matrix):
+    """
+    Flowchart: How to answer the fundamental questions.
+    Follows the decision process from Math 100, Handout 1 (Ali Behzadan).
+
+    Given the RREF of an augmented matrix [A | b]:
+      1. Locate the pivot columns.
+      2. Is the rightmost column a pivot column?
+         - Yes → inconsistent (no solution).
+         - No  → consistent (at least one solution).
+      3. Determine basic variables and free variables.
+      4. Does the system have at least one free variable?
+         - No  → unique solution.
+         - Yes → infinitely many solutions (parametric vector form).
+    """
+    pivots = find_pivots(matrix)
+    total_cols = len(matrix[0])
+    num_vars = total_cols - 1          # last column is the augmented column
+    pivot_cols = {c for _, c in pivots}
+
+    # Variable names: x1, x2, ..., xn
+    var_names = [f"x{i + 1}" for i in range(num_vars)]
+
+    print("=" * 50)
+    print("SOLVING THE SYSTEM (Flowchart)")
+    print("=" * 50)
+
+    # --- Locate pivot columns ---
+    print(f"\n  Pivot columns: {sorted(c + 1 for c in pivot_cols)}")
+
+    # --- Is the rightmost column (augmented) a pivot column? ---
+    if (total_cols - 1) in pivot_cols:
+        print("\n  The rightmost column of the augmented matrix IS a pivot column.")
+        print("  >> The solution set is EMPTY (the system is inconsistent).")
+        return
+
+    print("\n  The rightmost column of the augmented matrix is NOT a pivot column.")
+    print("  >> The system is CONSISTENT (at least one solution).")
+
+    # --- Determine basic and free variables ---
+    basic_cols = sorted(c for c in pivot_cols if c < num_vars)
+    free_cols = sorted(c for c in range(num_vars) if c not in pivot_cols)
+
+    basic_names = [var_names[c] for c in basic_cols]
+    free_names = [var_names[c] for c in free_cols]
+
+    print(f"\n  Basic variables:  {', '.join(basic_names)}")
+    if free_names:
+        print(f"  Free variables:   {', '.join(free_names)}")
+    else:
+        print(f"  Free variables:   (none)")
+
+    # Build a lookup: pivot_col -> pivot_row for reading equations
+    col_to_row = {c: r for r, c in pivots if c < num_vars}
+
+    # --- Does the system have at least one free variable? ---
+    if not free_cols:
+        # ---- UNIQUE SOLUTION ----
+        print("\n  >> The system has a UNIQUE solution.\n")
+
+        print("  Corresponding system of equations:")
+        for c in basic_cols:
+            r = col_to_row[c]
+            val = matrix[r][total_cols - 1]
+            print(f"    {var_names[c]} = {val}")
+
+        print("\n  Solution:")
+        solution_parts = []
+        for i in range(num_vars):
+            r = col_to_row[i]
+            val = matrix[r][total_cols - 1]
+            solution_parts.append(str(val))
+        vec = "(" + ", ".join(solution_parts) + ")"
+        print(f"    {vec}")
+    else:
+        # ---- INFINITELY MANY SOLUTIONS ----
+        print("\n  >> The system has INFINITELY MANY solutions.\n")
+
+        # Write the corresponding system of equations
+        print("  Corresponding system of equations:")
+        for c in basic_cols:
+            r = col_to_row[c]
+            rhs = str(matrix[r][total_cols - 1])
+            terms = []
+            for fc in free_cols:
+                coeff = -matrix[r][fc]  # move to right side
+                if coeff != 0:
+                    if coeff == 1:
+                        terms.append(f"+ {var_names[fc]}")
+                    elif coeff == -1:
+                        terms.append(f"- {var_names[fc]}")
+                    elif coeff > 0:
+                        terms.append(f"+ {coeff}{var_names[fc]}")
+                    else:
+                        terms.append(f"- {-coeff}{var_names[fc]}")
+            equation = rhs + " " + " ".join(terms) if terms else rhs
+            print(f"    {var_names[c]} = {equation.strip()}")
+        for fc in free_cols:
+            print(f"    {var_names[fc]} is free")
+
+        # Parametric vector form
+        print("\n  Parametric vector form:")
+
+        # Build particular solution (set all free vars = 0)
+        particular = [Fraction(0)] * num_vars
+        for c in basic_cols:
+            r = col_to_row[c]
+            particular[c] = matrix[r][total_cols - 1]
+
+        # Build direction vector for each free variable
+        directions = []
+        for fc in free_cols:
+            d = [Fraction(0)] * num_vars
+            d[fc] = Fraction(1)
+            for c in basic_cols:
+                r = col_to_row[c]
+                d[c] = -matrix[r][fc]
+            directions.append((fc, d))
+
+        # Print in column vector style
+        width = 8
+        # Header line
+        parts = [f"{'':>{width}}"]  # leading spacer for "x ="
+        parts.append(f"{'':>{width}}")  # particular vector column
+        for fc, _ in directions:
+            parts.append(f"{'':>{width}}")  # direction vector columns
+
+        # Print row by row
+        bracket_l = [" "] * num_vars
+        bracket_r = [" "] * num_vars
+        bracket_l[0] = "/"
+        bracket_l[-1] = "\\"
+        bracket_r[0] = "\\"
+        bracket_r[-1] = "/"
+        if num_vars == 1:
+            bracket_l[0] = "["
+            bracket_r[0] = "]"
+        elif num_vars == 2:
+            bracket_l[0] = "/"
+            bracket_l[1] = "\\"
+            bracket_r[0] = "\\"
+            bracket_r[1] = "/"
+        else:
+            for i in range(1, num_vars - 1):
+                bracket_l[i] = "|"
+                bracket_r[i] = "|"
+
+        for i in range(num_vars):
+            label = "    x = " if i == num_vars // 2 else "        "
+            p_val = f"{str(particular[i]):>{width}}"
+
+            line = f"{label}{bracket_l[i]} {p_val} {bracket_r[i]}"
+
+            for idx, (fc, d) in enumerate(directions):
+                param_name = var_names[fc]
+                if i == num_vars // 2:
+                    plus = f"  + {param_name} "
+                else:
+                    plus = f"       "
+                d_val = f"{str(d[i]):>{width}}"
+                line += f"{plus}{bracket_l[i]} {d_val} {bracket_r[i]}"
+
+            print(line)
+
+        print()
+
+
+def row_reduce(matrix, augmented=False):
     """Run the full Row Reduction Algorithm."""
     # Convert all entries to Fraction for exact arithmetic
     matrix = [[Fraction(val) for val in row] for row in matrix]
@@ -145,6 +312,10 @@ def row_reduce(matrix):
     print("=" * 50)
     matrix = backward_phase(matrix)
     print_matrix(matrix, "Reduced echelon form (RREF):")
+
+    # Flowchart: solve the system if augmented
+    if augmented:
+        solve_system(matrix)
 
     return matrix
 
@@ -176,4 +347,8 @@ if __name__ == "__main__":
     print("Row Reduction Algorithm")
     print("-" * 50)
     matrix = parse_matrix_input()
-    row_reduce(matrix)
+
+    aug = input("\n  Is this an augmented matrix? (y/n): ").strip().lower()
+    augmented = aug in ("y", "yes")
+
+    row_reduce(matrix, augmented=augmented)
